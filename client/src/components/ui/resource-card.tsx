@@ -10,6 +10,9 @@ type ResourceCardProps = {
 
 export function ResourceCard({ resource, usageHours }: ResourceCardProps) {
   const estimatedCost = (resource.price_per_hour * usageHours).toFixed(2);
+  const hourlyRate = typeof resource.price_per_hour === 'number' 
+    ? resource.price_per_hour.toFixed(2) 
+    : parseFloat(resource.price_per_hour).toFixed(2);
 
   return (
     <Card className="overflow-hidden transition-all duration-200 hover:shadow-lg">
@@ -18,12 +21,15 @@ export function ResourceCard({ resource, usageHours }: ResourceCardProps) {
           <div className="flex-shrink-0 text-2xl text-primary">
             <Microchip />
           </div>
-          <h3 className="ml-3 text-lg font-medium text-gray-900">{resource.resource_name}</h3>
+          <div className="ml-3">
+            <h3 className="text-lg font-medium text-gray-900">{resource.gpu_description || "GPU Instance"}</h3>
+            <p className="text-sm text-gray-500">{resource.resource_name}</p>
+          </div>
         </div>
         <div className="mt-4 space-y-2">
           <div className="text-sm text-gray-600 flex justify-between">
-            <span>GPU:</span>
-            <span className="font-medium text-gray-900">{resource.gpu_description}</span>
+            <span>Class:</span>
+            <span className="font-medium text-gray-900">{resource.resource_class || "Standard"}</span>
           </div>
           <div className="text-sm text-gray-600 flex justify-between">
             <span>vCPUs:</span>
@@ -34,12 +40,16 @@ export function ResourceCard({ resource, usageHours }: ResourceCardProps) {
             <span className="font-medium text-gray-900">{resource.ram}GB</span>
           </div>
           <div className="text-sm text-gray-600 flex justify-between">
-            <span>Hourly Rate:</span>
-            <span className="font-medium text-gray-900">${resource.price_per_hour.toFixed(2)}</span>
+            <span>OS:</span>
+            <span className="font-medium text-gray-900">{resource.operating_system}</span>
           </div>
           <div className="text-sm text-gray-600 flex justify-between">
+            <span>Hourly Rate:</span>
+            <span className="font-medium text-gray-900">${hourlyRate}</span>
+          </div>
+          <div className="text-sm text-gray-600 flex justify-between font-bold">
             <span>Estimated Cost:</span>
-            <span className="font-medium text-gray-900">${estimatedCost}</span>
+            <span className="font-medium text-primary">${estimatedCost}</span>
           </div>
         </div>
         <div className="mt-6">
