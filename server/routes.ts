@@ -572,43 +572,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Search params - Region: ${region}, Budget: ${budgetNum}, OS: ${os}, Hours: ${hoursNum}`);
 
-      // Map our frontend region names to the API's region format
-      const regionMap: Record<string, string> = {
-        'noida': 'ap-south-noi-1',
-        'delhi': 'ap-south-del-1',
-        'bangalore': 'ap-south-blr-1',
-        'mumbai': 'ap-south-mum-1'
-      };
-
-      // Define inverse mapping for API response processing
-      const inverseRegionMap: Record<string, string> = {};
-      Object.entries(regionMap).forEach(([key, value]) => {
-        inverseRegionMap[value] = key;
-      });
-
-      const apiRegion = regionMap[region];
+      // Since we now use exact API region codes in the frontend
       let resources = [];
 
       try {
-        // Try fetching from the external API first
-        if (apiRegion) {
-          const apiUrl = `https://customer.acecloudhosting.com/api/v1/pricing?is_gpu=true&resource=instances&region=${apiRegion}`;
-          console.log(`Fetching from API: ${apiUrl}`);
-          
-          const response = await axios.get(apiUrl);
-          
-          if (response.data && response.data.data && Array.isArray(response.data.data)) {
-            resources = response.data.data;
-            console.log(`Successfully fetched ${resources.length} resources from external API for region ${region}`);
-          }
-        } else {
-          console.log(`No API region mapping for ${region}, using sample data`);
-          // If no mapping exists, fall back immediately to sample data
-          resources = allGpuData;
+        // Try fetching from the external API with direct region value
+        const apiUrl = `https://customer.acecloudhosting.com/api/v1/pricing?is_gpu=true&resource=instances&region=${region}`;
+        console.log(`Fetching from API: ${apiUrl}`);
+        
+        const response = await axios.get(apiUrl);
+        
+        if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          resources = response.data.data;
+          console.log(`Successfully fetched ${resources.length} resources from external API for region ${region}`);
         }
-      } catch (apiError) {
-        console.error("API request failed, falling back to sample data:", apiError);
-        // Fall back to our sample data
+      } catch (error: any) {
+        console.error(`API request failed for region ${region}:`, error.message);
+        // Fall back to sample data if the API call fails
+        console.log(`Falling back to sample data for region ${region}`);
         resources = allGpuData;
       }
 
@@ -622,27 +603,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Resources after OS filtering (${os}): ${filteredResources.length}`);
 
-      // Then filter by region
+      // Then filter by region - since we use direct API regions now, this is simpler
       filteredResources = filteredResources.filter((resource: any) => {
-        // For API data, region might be in full format (ap-south-noi-1)
+        // For API data, region should exactly match what we requested
         const resourceRegion = resource.region;
-        
-        // Check if it's a direct match to our simplified region name
-        if (resourceRegion === region) {
-          return true;
-        }
-        
-        // Check if it matches the API format of our region
-        if (resourceRegion === apiRegion) {
-          return true; 
-        }
-        
-        // Check if it's an API format that we can map back to our simple name
-        if (inverseRegionMap[resourceRegion] === region) {
-          return true;
-        }
-        
-        return false;
+        return resourceRegion === region;
       });
 
       console.log(`Resources after region filtering (${region}): ${filteredResources.length}`);
@@ -716,18 +681,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        // Map our frontend region names to the API's region format
-        const regionMap: Record<string, string> = {
-          'noida': 'ap-south-noi-1',
-          'delhi': 'ap-south-del-1',
-          'bangalore': 'ap-south-blr-1',
-          'mumbai': 'ap-south-mum-1'
-        };
-
-        const apiRegion = regionMap[region] || region;
-        
-        // Make the actual API call to AceCloud
-        const apiUrl = `https://customer.acecloudhosting.com/api/v1/pricing?is_gpu=true&resource=instances&region=${apiRegion}`;
+        // Make the actual API call to AceCloud using the exact region code from frontend
+        const apiUrl = `https://customer.acecloudhosting.com/api/v1/pricing?is_gpu=true&resource=instances&region=${region}`;
+        console.log(`Fetching external resources from API: ${apiUrl}`);
         
         try {
           const response = await axios.get(apiUrl);
@@ -738,11 +694,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: "Success",
             data: data.data || [],
           });
-        } catch (axiosError) {
-          console.error("AceCloud API request failed:", axiosError);
+        } catch (error: any) {
+          console.error(`AceCloud API request failed for ${region}:`, error.message);
           
           // Fall back to our sample data if the API call fails
-          console.log("Falling back to sample data for region:", region);
+          console.log(`Falling back to sample data for region: ${region}`);
           const regionData = allGpuData.filter(item => item.region === region);
           
           return res.status(200).json({
@@ -751,8 +707,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             data: regionData,
           });
         }
-      } catch (apiError) {
-        console.error("API request failed:", apiError);
+      } catch (error: any) {
+        console.error("API request failed:", error.message);
         return res.status(502).json({
           error: true,
           message: "Failed to fetch data from external API",

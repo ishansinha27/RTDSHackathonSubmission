@@ -73,10 +73,10 @@ export default function GpuSearchForm({ onSubmit }: GpuSearchFormProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="noida">Noida</SelectItem>
-                          <SelectItem value="delhi">Delhi</SelectItem>
-                          <SelectItem value="bangalore">Bangalore</SelectItem>
-                          <SelectItem value="mumbai">Mumbai</SelectItem>
+                          <SelectItem value="ap-south-noi-1">Noida (ap-south-noi-1)</SelectItem>
+                          <SelectItem value="ap-south-del-1">Delhi (ap-south-del-1)</SelectItem>
+                          <SelectItem value="ap-south-mum-1">Mumbai (ap-south-mum-1)</SelectItem>
+                          <SelectItem value="us-east-at-1">US East (us-east-at-1)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
