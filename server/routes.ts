@@ -4,6 +4,7 @@ import { db } from "@db";
 import { gpus, searchParamsSchema } from "@shared/schema";
 import { and, eq, lte } from "drizzle-orm";
 import axios from "axios";
+import { setupAuth } from "./auth";
 
 // Large sample dataset from the user
 const gpuResourcesData = [
@@ -547,6 +548,8 @@ const otherRegionsData = [
 const allGpuData = [...gpuResourcesData, ...otherRegionsData];
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication routes and middleware
+  setupAuth(app);
   // API route to fetch resources based on search criteria
   app.get("/api/resources", async (req, res) => {
     try {

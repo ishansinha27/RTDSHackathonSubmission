@@ -14,7 +14,12 @@ const PostgresSessionStore = connectPg(session);
 
 declare global {
   namespace Express {
-    interface User extends typeof users.$inferSelect {}
+    // eslint-disable-next-line @typescript-eslint/no-empty-interface
+    interface User {
+      id: number;
+      username: string;
+      password: string;
+    }
   }
 }
 
