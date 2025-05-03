@@ -2,6 +2,7 @@ import { db } from "./index";
 import { users } from "@shared/schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import { eq } from "drizzle-orm/expressions";
 
 const scryptAsync = promisify(scrypt);
 
@@ -14,7 +15,7 @@ async function hashPassword(password: string) {
 async function seedUser() {
   try {
     // Check if a test user already exists
-    const existingUser = await db.select().from(users).where((u) => u.username === "demo");
+    const existingUser = await db.select().from(users).where(({ username }) => eq(username, "demo"));
     
     if (existingUser.length > 0) {
       console.log("Test user already exists, skipping...");
