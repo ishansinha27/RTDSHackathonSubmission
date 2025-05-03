@@ -603,12 +603,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Resources after OS filtering (${os}): ${filteredResources.length}`);
 
-      // Then filter by region - since we use direct API regions now, this is simpler
+      // Debug - log some resources to see what's in them
+      if (filteredResources.length > 0) {
+        console.log("Sample resource from API:", JSON.stringify(filteredResources[0], null, 2));
+      }
+
+      // Skip region filtering for now - the API already filters by region in the query
+      // The issue is that the regions in the response might be formatted differently from what we request
+      // Let's trust the API's region filtering
+      /* 
       filteredResources = filteredResources.filter((resource: any) => {
-        // For API data, region should exactly match what we requested
         const resourceRegion = resource.region;
         return resourceRegion === region;
       });
+      */
 
       console.log(`Resources after region filtering (${region}): ${filteredResources.length}`);
 
