@@ -10,7 +10,8 @@ import {
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Menu, User, LogOut } from "lucide-react";
+import { Loader2, Menu, User, LogOut, HelpCircle } from "lucide-react";
+import { ChatHelpDialog } from "@/components/ai-assistant/chat-help-dialog";
 
 export default function Header() {
   const { user, isLoading, logoutMutation } = useAuth();
@@ -36,7 +37,9 @@ export default function Header() {
             <Link href="#" className="text-gray-500 hover:text-gray-900 font-medium">Testimonials</Link>
           </nav>
           
-          <div className="hidden md:flex items-center justify-end md:flex-1 lg:w-0">
+          <div className="hidden md:flex items-center justify-end md:flex-1 lg:w-0 space-x-4">
+            <ChatHelpDialog />
+            
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
             ) : user ? (
@@ -61,7 +64,7 @@ export default function Header() {
                 <Link href="/auth" className="whitespace-nowrap text-primary hover:text-primary-700 font-medium">
                   Sign in
                 </Link>
-                <Link href="/auth?tab=register" className="ml-8 whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary hover:bg-primary-700">
+                <Link href="/auth?tab=register" className="ml-4 whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary hover:bg-primary-700">
                   Sign up
                 </Link>
               </>
@@ -89,6 +92,12 @@ export default function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="#">Testimonials</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <div className="w-full">
+                    <ChatHelpDialog />
+                  </div>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {isLoading ? (

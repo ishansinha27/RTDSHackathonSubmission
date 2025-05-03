@@ -5,6 +5,7 @@ import { gpus, searchParamsSchema } from "@shared/schema";
 import { and, eq, lte } from "drizzle-orm";
 import axios from "axios";
 import { setupAuth } from "./auth";
+import { generateGpuAdvice } from "./services/ai-service";
 
 // Large sample dataset from the user
 const gpuResourcesData = [
@@ -730,6 +731,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         error: true,
         message: "Internal server error",
+      });
+    }
+  });
+
+  // AI chatbot endpoint for GPU assistance
+  app.post("/api/ai/gpu-assistant", async (req, res) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({
+          error: true,
+          message: "Query parameter is required and must be a string"
+        });
+      }
+
+      const response = await generateGpuAdvice(query);
+      
+      return res.status(200).json({
+        error: false,
+        message: "Success",
+        data: {
+          response
+        }
+      });
+    } catch (error) {
+      console.error("Error in GPU AI assistant:", error);
+      return res.status(500).json({
+        error: true,
+        message: "Failed to process your request"
       });
     }
   });
