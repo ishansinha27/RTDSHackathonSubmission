@@ -567,6 +567,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { region, budget, os, hours } = validationResult.data;
+      const hoursNum = Number(hours);
+      const budgetNum = Number(budget);
+
+      console.log(`Search params - Region: ${region}, Budget: ${budgetNum}, OS: ${os}, Hours: ${hoursNum}`);
 
       // Map our frontend region names to the API's region format
       const regionMap: Record<string, string> = {
@@ -576,17 +580,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'mumbai': 'ap-south-mum-1'
       };
 
-      const apiRegion = regionMap[region] || region;
+      // Define inverse mapping for API response processing
+      const inverseRegionMap: Record<string, string> = {};
+      Object.entries(regionMap).forEach(([key, value]) => {
+        inverseRegionMap[value] = key;
+      });
+
+      const apiRegion = regionMap[region];
       let resources = [];
 
       try {
         // Try fetching from the external API first
-        const apiUrl = `https://customer.acecloudhosting.com/api/v1/pricing?is_gpu=true&resource=instances&region=${apiRegion}`;
-        const response = await axios.get(apiUrl);
-        
-        if (response.data && response.data.data && Array.isArray(response.data.data)) {
-          resources = response.data.data;
-          console.log(`Successfully fetched ${resources.length} resources from external API for region ${region}`);
+        if (apiRegion) {
+          const apiUrl = `https://customer.acecloudhosting.com/api/v1/pricing?is_gpu=true&resource=instances&region=${apiRegion}`;
+          console.log(`Fetching from API: ${apiUrl}`);
+          
+          const response = await axios.get(apiUrl);
+          
+          if (response.data && response.data.data && Array.isArray(response.data.data)) {
+            resources = response.data.data;
+            console.log(`Successfully fetched ${resources.length} resources from external API for region ${region}`);
+          }
+        } else {
+          console.log(`No API region mapping for ${region}, using sample data`);
+          // If no mapping exists, fall back immediately to sample data
+          resources = allGpuData;
         }
       } catch (apiError) {
         console.error("API request failed, falling back to sample data:", apiError);
@@ -594,29 +612,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         resources = allGpuData;
       }
 
-      // Filter resources based on region and OS
-      let filteredResources = resources.filter(resource => {
-        // Handle both full region name (from API) and short region name (from our data)
-        const resourceRegion = resource.region;
-        const matchesRegion = resourceRegion === region || 
-                             (regionMap[region] && resourceRegion === regionMap[region]);
-        
-        return matchesRegion && resource.operating_system === os;
+      // Debug logging
+      console.log(`Total resources before filtering: ${resources.length}`);
+
+      // Filter resources based on OS first
+      let filteredResources = resources.filter((resource: any) => {
+        return resource.operating_system === os.toLowerCase();
       });
 
-      // Apply budget filter
-      filteredResources = filteredResources.filter(resource => {
+      console.log(`Resources after OS filtering (${os}): ${filteredResources.length}`);
+
+      // Then filter by region
+      filteredResources = filteredResources.filter((resource: any) => {
+        // For API data, region might be in full format (ap-south-noi-1)
+        const resourceRegion = resource.region;
+        
+        // Check if it's a direct match to our simplified region name
+        if (resourceRegion === region) {
+          return true;
+        }
+        
+        // Check if it matches the API format of our region
+        if (resourceRegion === apiRegion) {
+          return true; 
+        }
+        
+        // Check if it's an API format that we can map back to our simple name
+        if (inverseRegionMap[resourceRegion] === region) {
+          return true;
+        }
+        
+        return false;
+      });
+
+      console.log(`Resources after region filtering (${region}): ${filteredResources.length}`);
+
+      // Apply budget filter - this is the critical part
+      filteredResources = filteredResources.filter((resource: any) => {
         // Ensure price_per_hour is treated as a number
         const hourlyPrice = typeof resource.price_per_hour === 'number' 
           ? resource.price_per_hour 
           : parseFloat(resource.price_per_hour);
         
-        const totalCost = hourlyPrice * hours;
-        return totalCost <= budget;
+        const totalCost = hourlyPrice * hoursNum;
+        
+        console.log(`Resource: ${resource.resource_name}, Hourly price: $${hourlyPrice}, Total cost for ${hoursNum} hours: $${totalCost}, Budget: $${budgetNum}, Within budget: ${totalCost <= budgetNum}`);
+        
+        return totalCost <= budgetNum;
       });
 
+      console.log(`Resources after budget filtering (<= $${budgetNum}): ${filteredResources.length}`);
+
       // Sort by price (cheapest first)
-      filteredResources = filteredResources.sort((a, b) => {
+      filteredResources = filteredResources.sort((a: any, b: any) => {
         const priceA = typeof a.price_per_hour === 'number' 
           ? a.price_per_hour 
           : parseFloat(a.price_per_hour);
@@ -628,8 +676,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return priceA - priceB;
       });
 
-      // Return first 5 results that match the criteria
+      // Return top 5 results
       const topResults = filteredResources.slice(0, 5);
+      console.log(`Returning top ${topResults.length} results`);
+
+      // Log the exact results we're returning
+      topResults.forEach((resource: any, index: number) => {
+        const hourlyPrice = typeof resource.price_per_hour === 'number' 
+          ? resource.price_per_hour 
+          : parseFloat(resource.price_per_hour);
+          
+        console.log(`Result ${index + 1}: ${resource.resource_name}, Price: $${hourlyPrice}/hr, Total: $${(hourlyPrice * hoursNum).toFixed(2)}`);
+      });
 
       return res.status(200).json({
         error: false,
